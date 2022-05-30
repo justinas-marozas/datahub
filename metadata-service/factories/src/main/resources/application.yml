@@ -111,7 +111,7 @@ ebean:
 cassandra:
   datasourceUsername: ${CASSANDRA_DATASOURCE_USERNAME:cassandra}
   datasourcePassword: ${CASSANDRA_DATASOURCE_PASSWORD:cassandra}
-  hosts: ${CASSANDRA_HOSTS:cassandra}
+  hosts: ${CASSANDRA_DATASOURCE_HOST:cassandra}
   port: ${CASSANDRA_PORT:9042}
   datacenter: ${CASSANDRA_DATACENTER:datacenter1}
   keyspace: ${CASSANDRA_KEYSPACE:datahub}
