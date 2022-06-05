@@ -54,6 +54,7 @@ dependencies {
   testCompile externalDependency.testContainersCassandra
   testCompile externalDependency.lombok
   testCompile project(':test-models')
+  testCompile project(':metadata-service:factories')
 
   testAnnotationProcessor externalDependency.lombok
 

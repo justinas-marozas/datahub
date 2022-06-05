@@ -29,5 +29,7 @@ dependencies {
   compile spec.product.pegasus.restliSpringBridge
 
   testCompile externalDependency.mockito
+  testCompile externalDependency.testContainers
+  testCompile externalDependency.testContainersCassandra
   testCompile externalDependency.testng
 }

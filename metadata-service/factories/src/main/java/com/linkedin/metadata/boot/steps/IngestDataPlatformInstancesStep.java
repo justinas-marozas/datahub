@@ -17,11 +17,12 @@ import lombok.extern.slf4j.Slf4j;
 import javax.annotation.Nonnull;
 import java.util.Optional;
 
+import static com.linkedin.metadata.Constants.*;
+
 
 @Slf4j
 @RequiredArgsConstructor
 public class IngestDataPlatformInstancesStep implements BootstrapStep {
-  private static final String PLATFORM_INSTANCE_ASPECT_NAME = "dataPlatformInstance";
   private static final int BATCH_SIZE = 1000;
 
   private final EntityService _entityService;
@@ -47,19 +48,24 @@ public class IngestDataPlatformInstancesStep implements BootstrapStep {
   @Override
   public void execute() throws Exception {
     log.info("Checking for DataPlatformInstance");
-    if (_migrationsDao.checkIfAspectExists(PLATFORM_INSTANCE_ASPECT_NAME)) {
+    if (_migrationsDao.checkIfAspectExists(DATA_PLATFORM_INSTANCE_ASPECT_NAME)) {
       log.info("DataPlatformInstance aspect exists. Skipping step");
       return;
     }
 
     long numEntities = _migrationsDao.countEntities();
+    if (numEntities == 0) {
+      throw new Exception("if (numEntities == 0) {");
+    }
     int start = 0;
 
     while (start < numEntities) {
       log.info("Reading urns {} to {} from the aspects table to generate dataplatform instance aspects", start,
           start + BATCH_SIZE);
       Iterable<String> urns = _migrationsDao.listAllUrns(start, start + BATCH_SIZE);
+      int counter = 0;
       for (String urnStr : urns) {
+        counter++;
         Urn urn = Urn.createFromString(urnStr);
         Optional<DataPlatformInstance> dataPlatformInstance = getDataPlatformInstance(urn);
         if (!dataPlatformInstance.isPresent()) {
@@ -69,7 +75,14 @@ public class IngestDataPlatformInstancesStep implements BootstrapStep {
         final AuditStamp aspectAuditStamp =
             new AuditStamp().setActor(Urn.createFromString(Constants.SYSTEM_ACTOR)).setTime(System.currentTimeMillis());
 
-        _entityService.ingestAspect(urn, PLATFORM_INSTANCE_ASPECT_NAME, dataPlatformInstance.get(), aspectAuditStamp, null);
+        RecordTemplate rrr = _entityService.ingestAspect(urn, DATA_PLATFORM_INSTANCE_ASPECT_NAME, dataPlatformInstance.get(), aspectAuditStamp, null);
+        String err = rrr.data().getError();
+        if (err != null) {
+          throw new Exception(err);
+        }
+      }
+      if (counter == 0) {
+        throw new Exception("if (counter == 0) {");
       }
       log.info("Finished ingesting DataPlatformInstance for urn {} to {}", start, start + BATCH_SIZE);
       start += BATCH_SIZE;
