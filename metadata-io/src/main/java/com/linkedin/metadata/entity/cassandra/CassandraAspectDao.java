@@ -94,11 +94,11 @@ public class CassandraAspectDao implements AspectDao, AspectMigrationsDao {
   public long countEntities() {
     validateConnection();
     SimpleStatement ss = selectFrom(CassandraAspect.TABLE_NAME)
-        .countAll()
-        .groupBy(CassandraAspect.URN_COLUMN)
+        .distinct()
+        .column(CassandraAspect.URN_COLUMN)
         .build();
 
-    return _cqlSession.execute(ss).one().getLong(0);
+    return _cqlSession.execute(ss).all().size();
   }
 
   @Override
@@ -163,7 +163,8 @@ public class CassandraAspectDao implements AspectDao, AspectMigrationsDao {
         .value(CassandraAspect.CREATED_ON_COLUMN, literal(aspect.getCreatedOn().getTime()))
         .value(CassandraAspect.CREATED_FOR_COLUMN, literal(aspect.getCreatedFor()))
         .value(CassandraAspect.ENTITY_COLUMN, literal(entity))
-        .value(CassandraAspect.CREATED_BY_COLUMN, literal(aspect.getCreatedBy()));
+        .value(CassandraAspect.CREATED_BY_COLUMN, literal(aspect.getCreatedBy()))
+        .ifNotExists();
       _cqlSession.execute(ri.build());
     } else {
 
@@ -176,7 +177,8 @@ public class CassandraAspectDao implements AspectDao, AspectMigrationsDao {
 
       Update u = uwa.whereColumn(CassandraAspect.URN_COLUMN).isEqualTo(literal(aspect.getUrn()))
         .whereColumn(CassandraAspect.ASPECT_COLUMN).isEqualTo(literal(aspect.getAspect()))
-        .whereColumn(CassandraAspect.VERSION_COLUMN).isEqualTo(literal(aspect.getVersion()));
+        .whereColumn(CassandraAspect.VERSION_COLUMN).isEqualTo(literal(aspect.getVersion()))
+        .ifExists();
 
       _cqlSession.execute(u.build());
     }
