@@ -374,6 +374,7 @@ extra_oracle_types = {
     make_sqlalchemy_type("SDO_POINT_TYPE"),
     make_sqlalchemy_type("SDO_ELEM_INFO_ARRAY"),
     make_sqlalchemy_type("SDO_ORDINATE_ARRAY"),
+    make_sqlalchemy_type("XMLTYPE"),
 }
 assert ischema_names
 

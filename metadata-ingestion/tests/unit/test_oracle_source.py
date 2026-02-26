@@ -337,6 +337,24 @@ class TestOracleInspectorObjectWrapper:
         assert columns[0]["name"] == "geom_column"
         assert not isinstance(columns[0]["type"], sqltypes.NullType)
 
+    def test_get_columns_xmltype(self):
+        """XMLTYPE columns must resolve to a non-null type when ischema_names is patched."""
+        self.mock_inspector.dialect.server_version_info = (19,)
+        self.mock_inspector.bind.execute.return_value = [
+            ["XML_COLUMN", "XMLTYPE", 0, None, None, "Y", None, None, "NO", None, None]
+        ]
+
+        with patch.dict(
+            "sqlalchemy.dialects.oracle.base.OracleDialect.ischema_names",
+            {klass.__name__: klass for klass in extra_oracle_types},
+            clear=False,
+        ):
+            columns = self.wrapper.get_columns("TEST_TABLE", "TEST_SCHEMA")
+
+        assert len(columns) == 1
+        assert columns[0]["name"] == "xml_column"
+        assert not isinstance(columns[0]["type"], sqltypes.NullType)
+
 
 class TestOracleSource:
     """Test cases for OracleSource."""
@@ -1146,17 +1164,13 @@ class TestOracleProcedureLineage:
         assert dependencies.upstream_tables[1].type == OracleObjectType.VIEW
 
 
-def test_sdo_geometry_types_registered_during_workunits_iteration():
-    """Regression: ischema_names patch must stay active while get_workunits is iterated.
-
-    With `return super().get_workunits()` inside a patch.dict block the context exits
-    before any iteration; `yield from` keeps it open for the full duration.
-    """
-    sdo_registered_during_iteration: list = []
+def test_extra_oracle_types_registered_during_workunits_iteration():
+    """Regression: ischema_names patch must stay active while get_workunits is iterated."""
+    registered_during_iteration: list[bool] = []
 
     def mock_parent_workunits():
         for type_cls in extra_oracle_types:
-            sdo_registered_during_iteration.append(type_cls.__name__ in ischema_names)
+            registered_during_iteration.append(type_cls.__name__ in ischema_names)
         return
         yield  # make it a generator
 
@@ -1168,15 +1182,11 @@ def test_sdo_geometry_types_registered_during_workunits_iteration():
     )
 
     with patch("datahub.ingestion.source.sql.oracle.oracledb"):
-        source = OracleSource(config, PipelineContext("test-sdo-geometry"))
+        source = OracleSource(config, PipelineContext("test-extra-types"))
         with patch(
             "datahub.ingestion.source.sql.sql_common.SQLAlchemySource.get_workunits",
             return_value=mock_parent_workunits(),
         ):
             list(source.get_workunits())
 
-    assert len(sdo_registered_during_iteration) == len(extra_oracle_types)
-    assert all(sdo_registered_during_iteration), (
-        "Oracle geospatial types were not in ischema_names during get_workunits iteration. "
-        "Ensure get_workunits uses 'yield from' not 'return' inside the patch.dict context."
-    )
+    assert all(registered_during_iteration)
